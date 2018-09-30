@@ -2,21 +2,23 @@ package ssh
 
 import (
 	"fmt"
-	"github.com/luopengift/types"
-	"github.com/pkg/sftp"
-	"golang.org/x/crypto/ssh"
-	"golang.org/x/crypto/ssh/terminal"
 	"io"
 	"io/ioutil"
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/luopengift/types"
+	"github.com/pkg/sftp"
+	"golang.org/x/crypto/ssh"
+	"golang.org/x/crypto/ssh/terminal"
 )
 
+// Endpoint Endpoint
 type Endpoint struct {
 	Name      string            `yaml:"name"`
 	Host      string            `yaml:"host"`
-	Ip        string            `yaml:"ip"`
+	IP        string            `yaml:"ip"`
 	Port      int               `yaml:"port"`
 	User      string            `yaml:"user"`
 	Password  string            `yaml:"password"`
@@ -26,15 +28,17 @@ type Endpoint struct {
 	Timeout   int               `yaml:"timeout"`
 }
 
+// NewEndpoint NewEndpoint
 func NewEndpoint() *Endpoint {
 	return new(Endpoint)
 }
 
+// NewEndpointWithValue NewEndpointWithValue
 func NewEndpointWithValue(name, host, ip string, port int, user, password, key string) *Endpoint {
 	return &Endpoint{
 		Name:     name,
 		Host:     host,
-		Ip:       ip,
+		IP:       ip,
 		Port:     port,
 		User:     user,
 		Password: password,
@@ -43,10 +47,12 @@ func NewEndpointWithValue(name, host, ip string, port int, user, password, key s
 	}
 }
 
+// Init Init
 func (ep *Endpoint) Init(filename string) error {
 	return types.ParseConfigFile(filename, ep)
 }
 
+// SetTimeout SetTimeout
 func (ep *Endpoint) SetTimeout(timeout int) {
 	ep.Timeout = timeout
 }
@@ -106,18 +112,20 @@ func (cr keyboardInteractive) Challenge(user, instruction string, questions []st
 	return answers, nil
 }
 
+// Address Address
 func (ep *Endpoint) Address() string {
 	addr := ""
 	if ep.Host != "" {
 		addr = fmt.Sprintf("%s:%d", ep.Host, ep.Port)
 	} else {
-		addr = ep.Ip + ":" + strconv.Itoa(ep.Port)
+		addr = ep.IP + ":" + strconv.Itoa(ep.Port)
 	}
-	addr = ep.Ip + ":" + strconv.Itoa(ep.Port)
+	addr = ep.IP + ":" + strconv.Itoa(ep.Port)
 	return addr
 }
 
-func (ep *Endpoint) InitSshClient() (*ssh.Client, error) {
+// InitSSHClient InitSSHClient
+func (ep *Endpoint) InitSSHClient() (*ssh.Client, error) {
 	auths, err := ep.authMethods()
 
 	if err != nil {
@@ -133,8 +141,9 @@ func (ep *Endpoint) InitSshClient() (*ssh.Client, error) {
 	return ssh.Dial("tcp", ep.Address(), config)
 }
 
+// Upload Upload
 func (ep *Endpoint) Upload(src, dest string) error {
-	client, err := ep.InitSshClient()
+	client, err := ep.InitSSHClient()
 	if err != nil {
 		return fmt.Errorf("建立ssh连接出错: %v", err)
 	}
@@ -176,8 +185,9 @@ func (ep *Endpoint) Upload(src, dest string) error {
 	return nil
 }
 
+// Download Download
 func (ep *Endpoint) Download(src, dest string) error {
-	client, err := ep.InitSshClient()
+	client, err := ep.InitSSHClient()
 	if err != nil {
 		return fmt.Errorf("建立ssh连接出错: %v", err)
 	}
@@ -219,8 +229,9 @@ func (ep *Endpoint) Download(src, dest string) error {
 	return nil
 }
 
+// CmdOutBytes CmdOutBytes
 func (ep *Endpoint) CmdOutBytes(cmd string) ([]byte, error) {
-	client, err := ep.InitSshClient()
+	client, err := ep.InitSSHClient()
 	if err != nil {
 		return nil, fmt.Errorf("建立SSH连接出错: %v", err)
 	}
@@ -235,8 +246,9 @@ func (ep *Endpoint) CmdOutBytes(cmd string) ([]byte, error) {
 	return session.CombinedOutput(cmd)
 }
 
+// StartTerminal StartTerminal
 func (ep *Endpoint) StartTerminal() error {
-	client, err := ep.InitSshClient()
+	client, err := ep.InitSSHClient()
 	if err != nil {
 		return fmt.Errorf("建立SSH连接出错: %v", err)
 	}
