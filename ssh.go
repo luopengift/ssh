@@ -237,13 +237,13 @@ func (ep *Endpoint) CmdOutBytes(cmd string) ([]byte, error) {
 	}
 	defer client.Close()
 
-	session, err := client.NewSession()
+	sess, err := client.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("创建Session出错: %v", err)
 	}
-	defer session.Close()
+	defer sess.Close()
 
-	return session.CombinedOutput(cmd)
+	return sess.CombinedOutput(cmd)
 }
 
 // StartTerminal StartTerminal
@@ -254,17 +254,17 @@ func (ep *Endpoint) StartTerminal() error {
 	}
 	defer client.Close()
 
-	session, err := client.NewSession()
+	sess, err := client.NewSession()
 	if err != nil {
 		return fmt.Errorf("创建Session出错: %v", err)
 	}
-	defer session.Close()
+	defer sess.Close()
 
-	session.Setenv("LANG", "zh_CN.UTF-8")
+	sess.Setenv("LANG", "zh_CN.UTF-8")
 
-	session.Stdout = os.Stdout
-	session.Stderr = os.Stderr
-	session.Stdin = os.Stdin
+	sess.Stdout = os.Stdout
+	sess.Stderr = os.Stderr
+	sess.Stdin = os.Stdin
 
 	fd := int(os.Stdin.Fd())
 	oldState, err := terminal.MakeRaw(fd)
@@ -283,7 +283,7 @@ func (ep *Endpoint) StartTerminal() error {
 				if err != nil {
 					return fmt.Errorf("获取窗口宽高出错: %v", err)
 				}
-				err = session.WindowChange(height, width)
+				err = sess.WindowChange(height, width)
 				if err != nil {
 					return fmt.Errorf("改变窗口大小出错: %v", err)
 				}
@@ -298,16 +298,16 @@ func (ep *Endpoint) StartTerminal() error {
 		ssh.TTY_OP_OSPEED: 14400,
 	}
 
-	if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
+	if err := sess.RequestPty("xterm-256color", height, width, modes); err != nil {
 		return fmt.Errorf("创建终端出错: %v", err)
 	}
 
-	err = session.Shell()
+	err = sess.Shell()
 	if err != nil {
 		return fmt.Errorf("执行Shell出错: %v", err)
 	}
 
-	err = session.Wait()
+	err = sess.Wait()
 	if err != nil {
 		return nil // fmt.Errorf("执行Wait出错: %v", err)
 	}
