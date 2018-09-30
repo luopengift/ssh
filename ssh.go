@@ -26,6 +26,7 @@ type Endpoint struct {
 	Key       string            `yaml:"key"`
 	QAs       map[string]string `yaml:"qas"` //questions-answers
 	Timeout   int               `yaml:"timeout"`
+	writers   []io.Writer       // this is used for screen stream copy or backup
 }
 
 // NewEndpoint NewEndpoint
@@ -55,6 +56,11 @@ func (ep *Endpoint) Init(filename string) error {
 // SetTimeout SetTimeout
 func (ep *Endpoint) SetTimeout(timeout int) {
 	ep.Timeout = timeout
+}
+
+// SetWriters this method is useful in StartTerminal
+func (ep *Endpoint) SetWriters(writers ...io.Writer) {
+	ep.writers = writers
 }
 
 // 解析登录方式
@@ -262,10 +268,26 @@ func (ep *Endpoint) StartTerminal() error {
 
 	sess.Setenv("LANG", "zh_CN.UTF-8")
 
-	sess.Stdout = os.Stdout
-	sess.Stderr = os.Stderr
+	f, _ := os.OpenFile("a.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	defer f.Close()
 	sess.Stdin = os.Stdin
 
+	if ep.writers == nil {
+		sess.Stdout = os.Stdout
+		sess.Stderr = os.Stderr
+	} else {
+		stdout, _ := sess.StdoutPipe()
+		stderr, _ := sess.StderrPipe()
+
+		outs := []io.Writer{os.Stdout}
+		errs := []io.Writer{os.Stderr}
+
+		outs = append(outs, ep.writers...)
+		errs = append(errs, ep.writers...)
+
+		go copyBuffer(outs, stdout, nil)
+		go copyBuffer(errs, stderr, nil)
+	}
 	fd := int(os.Stdin.Fd())
 	oldState, err := terminal.MakeRaw(fd)
 	if err != nil {
