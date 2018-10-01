@@ -1,11 +1,12 @@
 package ssh
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
-	"strconv"
+	"strings"
 	"time"
 
 	"github.com/luopengift/types"
@@ -19,7 +20,7 @@ type Endpoint struct {
 	Name      string            `yaml:"name"`
 	Host      string            `yaml:"host"`
 	IP        string            `yaml:"ip"`
-	Port      int               `yaml:"port"`
+	Port      string            `yaml:"port"`
 	User      string            `yaml:"user"`
 	Password  string            `yaml:"password"`
 	Passwords []string          `yaml:"passwords"` //密码列表
@@ -35,7 +36,7 @@ func NewEndpoint() *Endpoint {
 }
 
 // NewEndpointWithValue NewEndpointWithValue
-func NewEndpointWithValue(name, host, ip string, port int, user, password, key string) *Endpoint {
+func NewEndpointWithValue(name, host, ip, port, user, password, key string) *Endpoint {
 	return &Endpoint{
 		Name:     name,
 		Host:     host,
@@ -65,41 +66,46 @@ func (ep *Endpoint) SetWriters(writers ...io.Writer) {
 
 // 解析登录方式
 func (ep *Endpoint) authMethods() ([]ssh.AuthMethod, error) {
-	authMethods := []ssh.AuthMethod{}
+	var authMethods []ssh.AuthMethod
+	var err error
 
-	ep.Passwords = append(ep.Passwords, ep.Password)
-	if length := len(ep.Passwords); length != 0 {
+	passwords := []string{ep.Password}
+	passwords = append(passwords, ep.Passwords...)
+
+	if length := len(passwords); length != 0 {
 		n := 0
 		authMethod := ssh.RetryableAuthMethod(ssh.PasswordCallback(func() (string, error) {
-			password := ep.Passwords[n]
+			password := passwords[n]
 			n++
 			return password, nil
 		}), length)
 		authMethods = append(authMethods, authMethod)
 	}
 
-	if ep.Key == "" {
-		return authMethods, nil
+	if ep.Key != "" {
+		var keyBytes []byte
+		keyBytes, err = base64.StdEncoding.DecodeString(strings.TrimSpace(ep.Key)) // private key content, must base64 code
+		if err != nil {
+			keyBytes, err = ioutil.ReadFile(ep.Key) //private key file
+		}
+		if err != nil {
+			return authMethods, err
+		}
+		// Create the Signer for this private key.
+		var signer ssh.Signer
+		if ep.Password == "" {
+			signer, err = ssh.ParsePrivateKey(keyBytes)
+		} else {
+			signer, err = ssh.ParsePrivateKeyWithPassphrase(keyBytes, []byte(ep.Password))
+		}
+		if err != nil {
+			return authMethods, err
+		}
+		authMethods = append(authMethods, ssh.PublicKeys(signer))
 	}
-	keyBytes, err := ioutil.ReadFile(ep.Key)
-	if err != nil {
-		return authMethods, err
-	}
-	// Create the Signer for this private key.
-	var signer ssh.Signer
-	if ep.Password == "" {
-		signer, err = ssh.ParsePrivateKey(keyBytes)
-	} else {
-		signer, err = ssh.ParsePrivateKeyWithPassphrase(keyBytes, []byte(ep.Password))
-	}
-	if err != nil {
-		return authMethods, err
-	}
-	authMethods = append(authMethods, ssh.PublicKeys(signer))
-
 	if ep.QAs != nil {
 		answers := keyboardInteractive(ep.QAs)
-		authMethods = append(authMethods, ssh.PublicKeys(signer), ssh.KeyboardInteractive(answers.Challenge))
+		authMethods = append(authMethods, ssh.KeyboardInteractive(answers.Challenge))
 	}
 	return authMethods, nil
 }
@@ -120,30 +126,25 @@ func (cr keyboardInteractive) Challenge(user, instruction string, questions []st
 
 // Address Address
 func (ep *Endpoint) Address() string {
-	addr := ""
-	if ep.Host != "" {
-		addr = fmt.Sprintf("%s:%d", ep.Host, ep.Port)
-	} else {
-		addr = ep.IP + ":" + strconv.Itoa(ep.Port)
+	if ep.IP != "" {
+		return fmt.Sprintf("%s:%s", ep.IP, ep.Port)
 	}
-	addr = ep.IP + ":" + strconv.Itoa(ep.Port)
-	return addr
+	return fmt.Sprintf("%s:%s", ep.Host, ep.Port)
 }
 
 // InitSSHClient InitSSHClient
 func (ep *Endpoint) InitSSHClient() (*ssh.Client, error) {
 	auths, err := ep.authMethods()
-
 	if err != nil {
 		return nil, fmt.Errorf("鉴权出错: %v", err)
 	}
+
 	config := &ssh.ClientConfig{
 		User:            ep.User,
 		Auth:            auths,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 		Timeout:         time.Duration(ep.Timeout) * time.Second,
 	}
-
 	return ssh.Dial("tcp", ep.Address(), config)
 }
 
