@@ -10,7 +10,8 @@ import (
 
 func main() {
 	endpoint := ssh.NewEndpointWithValue("testing", "test", "127.0.0.1", 22, "luopengift", "", path.Join(os.Getenv("HOME"), ".ssh/id_rsa"))
-	f, _ := os.OpenFile("a.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	//f, _ := os.OpenFile("a.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	f := log.NewFile("/tmp/ssh.%Y%M%D-%h%m")
 	defer f.Close()
 	endpoint.SetWriters(f)
 	if err := endpoint.StartTerminal(); err != nil {
