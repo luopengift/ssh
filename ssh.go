@@ -267,9 +267,6 @@ func (ep *Endpoint) StartTerminal() error {
 	defer sess.Close()
 
 	sess.Setenv("LANG", "zh_CN.UTF-8")
-
-	f, _ := os.OpenFile("a.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-	defer f.Close()
 	sess.Stdin = os.Stdin
 
 	if ep.writers == nil {
