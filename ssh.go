@@ -86,7 +86,8 @@ func (ep *Endpoint) authMethods() ([]ssh.AuthMethod, error) {
 		var keyBytes []byte
 		keyBytes, err = base64.StdEncoding.DecodeString(strings.TrimSpace(ep.Key)) // private key content, must base64 code
 		if err != nil {
-			keyBytes, err = ioutil.ReadFile(ep.Key) //private key file
+			filepath := strings.Replace(ep.Key, "~", os.Getenv("HOME"), -1)
+			keyBytes, err = ioutil.ReadFile(filepath) //private key file
 		}
 		if err != nil {
 			return authMethods, err

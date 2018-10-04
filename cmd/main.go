@@ -1,15 +1,12 @@
 package main
 
 import (
-	"os"
-	"path"
-
 	"github.com/luopengift/log"
 	"github.com/luopengift/ssh"
 )
 
 func main() {
-	endpoint := ssh.NewEndpointWithValue("testing", "test", "127.0.0.1", "22", "luopengift", "xxx", path.Join(os.Getenv("HOME"), ".ssh/id_rsa"))
+	endpoint := ssh.NewEndpointWithValue("testing", "test", "127.0.0.1", "22", "luopengift", "xxx", "~/.ssh/id_rsa")
 	//f, _ := os.OpenFile("a.txt", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
 	f := log.NewFile("/tmp/ssh.%Y%M%D-%h%m")
 	defer f.Close()

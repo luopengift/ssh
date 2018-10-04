@@ -2,6 +2,11 @@ package ssh
 
 import "io"
 
+// Copy copy buffer
+func Copy(dsts []io.Writer, src io.Reader) (int64, error) {
+	return copyBuffer(dsts, src, nil)
+}
+
 // copyBuffer is copied form io.copyBuffer, but this can copy to more than one Writer.
 // copyBuffer is the actual implementation of Copy and CopyBuffer.
 // if buf is nil, one is allocated.
