@@ -36,7 +36,7 @@ func NewEndpoint() *Endpoint {
 }
 
 // NewEndpointWithValue NewEndpointWithValue
-func NewEndpointWithValue(name, host, ip, port, user, password, key string) *Endpoint {
+func NewEndpointWithValue(name, host, ip, port, user, password, key string, writers ...io.Writer) *Endpoint {
 	return &Endpoint{
 		Name:     name,
 		Host:     host,
@@ -46,6 +46,7 @@ func NewEndpointWithValue(name, host, ip, port, user, password, key string) *End
 		Password: password,
 		Key:      key,
 		Timeout:  5,
+		writers:  writers,
 	}
 }
 
