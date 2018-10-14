@@ -65,6 +65,42 @@ func (ep *Endpoint) SetWriters(writers ...io.Writer) {
 	ep.writers = writers
 }
 
+// Mask endpoint, 优先级从高到底, 如果之前的有值那么后面的默认忽略掉
+func (ep *Endpoint) Mask(endpoints ...*Endpoint) {
+	for _, endpoint := range endpoints {
+		if ep.Name == "" {
+			ep.Name = endpoint.Name
+		}
+		if ep.Host == "" {
+			ep.Host = endpoint.Host
+		}
+		if ep.IP == "" {
+			ep.IP = endpoint.IP
+		}
+		if ep.Port == "" {
+			ep.Port = endpoint.Port
+		}
+		if ep.User == "" {
+			ep.User = endpoint.User
+		}
+		if ep.Password == "" {
+			ep.Password = endpoint.Password
+		}
+		if len(ep.Passwords) == 0 {
+			ep.Passwords = endpoint.Passwords
+		}
+		if ep.Key == "" {
+			ep.Key = endpoint.Key
+		}
+		if ep.QAs == nil {
+			ep.QAs = endpoint.QAs
+		}
+		if ep.Timeout == 0 {
+			ep.Timeout = endpoint.Timeout
+		}
+	}
+}
+
 // 解析登录方式
 func (ep *Endpoint) authMethods() ([]ssh.AuthMethod, error) {
 	var authMethods []ssh.AuthMethod
