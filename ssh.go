@@ -92,13 +92,13 @@ func (ep *Endpoint) Mask(endpoints ...*Endpoint) {
 		if ep.Port == "" {
 			ep.Port = endpoint.Port
 		}
-		if ep.User == "" {
+		if ep.User == "" && len(ep.Users) == 0 {
 			ep.User = endpoint.User
 		}
 		if len(ep.Users) == 0 {
 			ep.Users = endpoint.Users
 		}
-		if ep.Password == "" {
+		if ep.Password == "" && len(ep.Passwords) == 0 {
 			ep.Password = endpoint.Password
 		}
 		if len(ep.Passwords) == 0 {
