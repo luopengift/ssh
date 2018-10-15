@@ -77,6 +77,24 @@ func (ep *Endpoint) SetWriters(writers ...io.Writer) {
 	ep.writers = writers
 }
 
+// GetUsers get users list
+// if user is not null, then return user directly
+func (ep *Endpoint) GetUsers() ([]string, bool) {
+	if ep.User != "" {
+		return []string{ep.User}, true
+	} else {
+		return ep.Users, false
+	}
+}
+
+func (ep *Endpoint) GetPasswords() ([]string, bool) {
+	if ep.Password != "" {
+		return []string{ep.Password}, true
+	} else {
+		return ep.Passwords, false
+	}
+}
+
 // Mask endpoint, 优先级从高到底, 如果之前的有值那么后面的默认忽略掉
 func (ep *Endpoint) Mask(endpoints ...*Endpoint) {
 	for _, endpoint := range endpoints {
@@ -118,12 +136,7 @@ func (ep *Endpoint) Mask(endpoints ...*Endpoint) {
 
 // 解析登录方式
 func (ep *Endpoint) authMethods() (authMethods []ssh.AuthMethod, err error) {
-	var passwords []string
-	if ep.Password != "" {
-		passwords = append(passwords, ep.Password)
-	} else {
-		passwords = append(passwords, ep.Passwords...)
-	}
+	passwords, _ := ep.GetPasswords()
 
 	if length := len(passwords); length != 0 {
 		n := 0
@@ -188,12 +201,7 @@ func (ep *Endpoint) Address() string {
 
 // InitSSHClient InitSSHClient
 func (ep *Endpoint) InitSSHClient() (client *ssh.Client, err error) {
-	var users []string
-	if ep.User != "" {
-		users = append(users, ep.User)
-	} else {
-		users = append(users, ep.Users...)
-	}
+	users, _ := ep.GetUsers()
 
 	for _, user := range users {
 		var auths []ssh.AuthMethod
