@@ -16,12 +16,14 @@ import (
 )
 
 // Endpoint Endpoint
+// !! users, passwords 仅在登陆认证时当user/password字段为空时使用
 type Endpoint struct {
 	Name      string            `yaml:"name"`
 	Host      string            `yaml:"host"`
 	IP        string            `yaml:"ip"`
 	Port      string            `yaml:"port"`
 	User      string            `yaml:"user"`
+	Users     []string          `yaml:"users"` // 多个用户
 	Password  string            `yaml:"password"`
 	Passwords []string          `yaml:"passwords"` //密码列表
 	Key       string            `yaml:"key"`
@@ -55,6 +57,16 @@ func (ep *Endpoint) Init(filename string) error {
 	return types.ParseConfigFile(filename, ep)
 }
 
+// SetUsers set multi-user
+func (ep *Endpoint) SetUsers(users ...string) {
+	ep.Users = users
+}
+
+// SetPasswords set multi-password
+func (ep *Endpoint) SetPasswords(passwords ...string) {
+	ep.Passwords = passwords
+}
+
 // SetTimeout SetTimeout
 func (ep *Endpoint) SetTimeout(timeout int) {
 	ep.Timeout = timeout
@@ -83,6 +95,9 @@ func (ep *Endpoint) Mask(endpoints ...*Endpoint) {
 		if ep.User == "" {
 			ep.User = endpoint.User
 		}
+		if len(ep.Users) == 0 {
+			ep.Users = endpoint.Users
+		}
 		if ep.Password == "" {
 			ep.Password = endpoint.Password
 		}
@@ -102,12 +117,13 @@ func (ep *Endpoint) Mask(endpoints ...*Endpoint) {
 }
 
 // 解析登录方式
-func (ep *Endpoint) authMethods() ([]ssh.AuthMethod, error) {
-	var authMethods []ssh.AuthMethod
-	var err error
-
-	passwords := []string{ep.Password}
-	passwords = append(passwords, ep.Passwords...)
+func (ep *Endpoint) authMethods() (authMethods []ssh.AuthMethod, err error) {
+	var passwords []string
+	if ep.Password != "" {
+		passwords = append(passwords, ep.Password)
+	} else {
+		passwords = append(passwords, ep.Passwords...)
+	}
 
 	if length := len(passwords); length != 0 {
 		n := 0
@@ -171,19 +187,34 @@ func (ep *Endpoint) Address() string {
 }
 
 // InitSSHClient InitSSHClient
-func (ep *Endpoint) InitSSHClient() (*ssh.Client, error) {
-	auths, err := ep.authMethods()
-	if err != nil {
-		return nil, fmt.Errorf("鉴权出错: %v", err)
+func (ep *Endpoint) InitSSHClient() (client *ssh.Client, err error) {
+	var users []string
+	if ep.User != "" {
+		users = append(users, ep.User)
+	} else {
+		users = append(users, ep.Users...)
 	}
 
-	config := &ssh.ClientConfig{
-		User:            ep.User,
-		Auth:            auths,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		Timeout:         time.Duration(ep.Timeout) * time.Second,
+	for _, user := range users {
+		var auths []ssh.AuthMethod
+		auths, err = ep.authMethods()
+		if err != nil {
+			return nil, fmt.Errorf("鉴权出错: %v", err)
+		}
+
+		config := &ssh.ClientConfig{
+			User:            user,
+			Auth:            auths,
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+			Timeout:         time.Duration(ep.Timeout) * time.Second,
+		}
+
+		client, err = ssh.Dial("tcp", ep.Address(), config)
+		if err == nil {
+			return client, nil
+		}
 	}
-	return ssh.Dial("tcp", ep.Address(), config)
+	return nil, err
 }
 
 // Upload Upload
