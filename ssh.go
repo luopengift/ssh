@@ -29,6 +29,7 @@ type Endpoint struct {
 	Key       string            `yaml:"key"`
 	QAs       map[string]string `yaml:"qas"` //questions-answers
 	Timeout   int               `yaml:"timeout"`
+	Labels    map[string]string `yaml:"labels"`
 	writers   []io.Writer       // this is used for screen stream copy or backup
 }
 
