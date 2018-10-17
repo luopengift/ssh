@@ -83,17 +83,17 @@ func (ep *Endpoint) SetWriters(writers ...io.Writer) {
 func (ep *Endpoint) GetUsers() ([]string, bool) {
 	if ep.User != "" {
 		return []string{ep.User}, true
-	} else {
-		return ep.Users, false
 	}
+	return ep.Users, false
 }
 
+// GetPasswords get passwords list
+// if password is not null, then return password directly
 func (ep *Endpoint) GetPasswords() ([]string, bool) {
 	if ep.Password != "" {
 		return []string{ep.Password}, true
-	} else {
-		return ep.Passwords, false
 	}
+	return ep.Passwords, false
 }
 
 // Mask endpoint, 优先级从高到底, 如果之前的有值那么后面的默认忽略掉
