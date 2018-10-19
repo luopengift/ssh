@@ -96,6 +96,25 @@ func (ep *Endpoint) GetPasswords() ([]string, bool) {
 	return ep.Passwords, false
 }
 
+// Copy copy a endpoint
+func (ep *Endpoint) Copy() *Endpoint {
+	endpoint := NewEndpoint()
+	endpoint.Name = ep.Name
+	endpoint.Host = ep.Host
+	endpoint.IP = ep.IP
+	endpoint.Port = ep.Port
+	endpoint.User = ep.User
+	endpoint.Users = ep.Users
+	endpoint.Password = ep.Password
+	endpoint.Passwords = ep.Passwords
+	endpoint.Key = ep.Key
+	endpoint.QAs = ep.QAs
+	endpoint.Timeout = ep.Timeout
+	endpoint.Labels = ep.Labels
+	endpoint.writers = ep.writers
+	return endpoint
+}
+
 // Mask endpoint, 优先级从高到底, 如果之前的有值那么后面的默认忽略掉
 func (ep *Endpoint) Mask(endpoints ...*Endpoint) {
 	for _, endpoint := range endpoints {
