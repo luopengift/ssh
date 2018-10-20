@@ -104,9 +104,9 @@ func (ep *Endpoint) Copy() *Endpoint {
 	endpoint.IP = ep.IP
 	endpoint.Port = ep.Port
 	endpoint.User = ep.User
-	endpoint.Users = ep.Users
+	endpoint.Users = append(endpoint.Users, ep.Users...)
 	endpoint.Password = ep.Password
-	endpoint.Passwords = ep.Passwords
+	endpoint.Passwords = append(endpoint.Users, ep.Passwords...)
 	endpoint.Key = ep.Key
 	endpoint.QAs = ep.QAs
 	endpoint.Timeout = ep.Timeout
@@ -134,13 +134,13 @@ func (ep *Endpoint) Mask(endpoints ...*Endpoint) {
 			ep.User = endpoint.User
 		}
 		if len(ep.Users) == 0 {
-			ep.Users = endpoint.Users
+			ep.Users = append(ep.Users, endpoint.Users...)
 		}
 		if ep.Password == "" && len(ep.Passwords) == 0 {
 			ep.Password = endpoint.Password
 		}
 		if len(ep.Passwords) == 0 {
-			ep.Passwords = endpoint.Passwords
+			ep.Passwords = append(ep.Passwords, endpoint.Passwords...)
 		}
 		if ep.Key == "" {
 			ep.Key = endpoint.Key
@@ -400,8 +400,7 @@ func (ep *Endpoint) StartTerminal() error {
 				if err != nil {
 					return fmt.Errorf("获取窗口宽高出错: %v", err)
 				}
-				err = sess.WindowChange(height, width)
-				if err != nil {
+				if err = sess.WindowChange(height, width); err != nil {
 					return fmt.Errorf("改变窗口大小出错: %v", err)
 				}
 				t.Reset(500 * time.Millisecond)
@@ -415,18 +414,13 @@ func (ep *Endpoint) StartTerminal() error {
 		ssh.TTY_OP_OSPEED: 14400,
 	}
 
-	if err := sess.RequestPty("xterm-256color", height, width, modes); err != nil {
+	if err = sess.RequestPty("xterm-256color", height, width, modes); err != nil {
 		return fmt.Errorf("创建终端出错: %v", err)
 	}
 
-	err = sess.Shell()
-	if err != nil {
+	if err = sess.Shell(); err != nil {
 		return fmt.Errorf("执行Shell出错: %v", err)
 	}
 
-	err = sess.Wait()
-	if err != nil {
-		return nil // fmt.Errorf("执行Wait出错: %v", err)
-	}
-	return nil
+	return sess.Wait()
 }
