@@ -32,6 +32,8 @@ type Endpoint struct {
 	Timeout   int               `yaml:"timeout"`
 	Labels    map[string]string `yaml:"labels"`
 	writers   []io.Writer       // this is used for screen stream copy or backup
+
+	client *ssh.Client `yaml:"-"`
 }
 
 // NewEndpoint NewEndpoint
@@ -230,14 +232,17 @@ func (ep *Endpoint) Address() string {
 }
 
 // InitSSHClient InitSSHClient
-func (ep *Endpoint) InitSSHClient() (client *ssh.Client, err error) {
+func (ep *Endpoint) InitSSHClient() (err error) {
+	if ep.client != nil {
+		return nil
+	}
 	users, _ := ep.GetUsers()
 
 	for _, user := range users {
 		var auths []ssh.AuthMethod
 		auths, err = ep.authMethods()
 		if err != nil {
-			return nil, fmt.Errorf("鉴权出错: %v", err)
+			return fmt.Errorf("鉴权出错: %v", err)
 		}
 
 		config := &ssh.ClientConfig{
@@ -247,23 +252,20 @@ func (ep *Endpoint) InitSSHClient() (client *ssh.Client, err error) {
 			Timeout:         time.Duration(ep.Timeout) * time.Second,
 		}
 
-		client, err = ssh.Dial("tcp", ep.Address(), config)
-		if err == nil {
-			return client, nil
+		if ep.client, err = ssh.Dial("tcp", ep.Address(), config); err == nil {
+			return nil
 		}
 	}
-	return nil, err
+	return err
 }
 
 // Upload Upload
 func (ep *Endpoint) Upload(src, dest string, mode os.FileMode) error {
-	client, err := ep.InitSSHClient()
-	if err != nil {
+	if err := ep.InitSSHClient(); err != nil {
 		return fmt.Errorf("建立ssh连接出错: %v", err)
 	}
-	defer client.Close()
 
-	sftpClient, err := sftp.NewClient(client)
+	sftpClient, err := sftp.NewClient(ep.client)
 	if err != nil {
 		return fmt.Errorf("建立sftp出错: %v", err)
 	}
@@ -301,13 +303,10 @@ func (ep *Endpoint) Upload(src, dest string, mode os.FileMode) error {
 
 // Download Download
 func (ep *Endpoint) Download(src, dest string) error {
-	client, err := ep.InitSSHClient()
-	if err != nil {
+	if err := ep.InitSSHClient(); err != nil {
 		return fmt.Errorf("建立ssh连接出错: %v", err)
 	}
-	defer client.Close()
-
-	sftpClient, err := sftp.NewClient(client)
+	sftpClient, err := sftp.NewClient(ep.client)
 	if err != nil {
 		return fmt.Errorf("建立sftp出错: %v", err)
 	}
@@ -345,13 +344,10 @@ func (ep *Endpoint) Download(src, dest string) error {
 
 // CmdOutBytes CmdOutBytes
 func (ep *Endpoint) CmdOutBytes(cmd string) ([]byte, error) {
-	client, err := ep.InitSSHClient()
-	if err != nil {
+	if err := ep.InitSSHClient(); err != nil {
 		return nil, fmt.Errorf("建立SSH连接出错: %v", err)
 	}
-	defer client.Close()
-
-	sess, err := client.NewSession()
+	sess, err := ep.client.NewSession()
 	if err != nil {
 		return nil, fmt.Errorf("创建Session出错: %v", err)
 	}
@@ -373,13 +369,10 @@ func (ep *Endpoint) CmdOutBytes(cmd string) ([]byte, error) {
 
 // StartTerminal StartTerminal
 func (ep *Endpoint) StartTerminal() error {
-	client, err := ep.InitSSHClient()
-	if err != nil {
+	if err := ep.InitSSHClient(); err != nil {
 		return fmt.Errorf("建立SSH连接出错: %v", err)
 	}
-	defer client.Close()
-
-	sess, err := client.NewSession()
+	sess, err := ep.client.NewSession()
 	if err != nil {
 		return fmt.Errorf("创建Session出错: %v", err)
 	}
@@ -444,4 +437,11 @@ func (ep *Endpoint) StartTerminal() error {
 	}
 
 	return sess.Wait()
+}
+
+func (ep *Endpoint) Close() error {
+	if ep.client != nil {
+		return ep.client.Close()
+	}
+	return nil
 }
