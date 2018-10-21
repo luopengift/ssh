@@ -256,7 +256,7 @@ func (ep *Endpoint) InitSSHClient() (client *ssh.Client, err error) {
 }
 
 // Upload Upload
-func (ep *Endpoint) Upload(src, dest string) error {
+func (ep *Endpoint) Upload(src, dest string, mode os.FileMode) error {
 	client, err := ep.InitSSHClient()
 	if err != nil {
 		return fmt.Errorf("建立ssh连接出错: %v", err)
@@ -296,7 +296,7 @@ func (ep *Endpoint) Upload(src, dest string) error {
 		}
 		size += n
 	}
-	return nil
+	return destFile.Chmod(mode)
 }
 
 // Download Download
