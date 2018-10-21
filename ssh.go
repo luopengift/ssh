@@ -27,7 +27,8 @@ type Endpoint struct {
 	Password  string            `yaml:"password"`
 	Passwords []string          `yaml:"passwords"` //密码列表
 	Key       string            `yaml:"key"`
-	QAs       map[string]string `yaml:"qas"` //questions-answers
+	QAs       map[string]string `yaml:"qas"`    //questions-answers
+	Pseudo    bool              `yaml:"pseudo"` // like "ssh -tt", Force pseudo-terminal allocation.
 	Timeout   int               `yaml:"timeout"`
 	Labels    map[string]string `yaml:"labels"`
 	writers   []io.Writer       // this is used for screen stream copy or backup
@@ -56,6 +57,11 @@ func NewEndpointWithValue(name, host, ip, port, user, password, key string, writ
 // Init Init
 func (ep *Endpoint) Init(filename string) error {
 	return types.ParseConfigFile(filename, ep)
+}
+
+// SetPseudo disable/force pseudo-terminal allocation.
+func (ep *Endpoint) SetPseudo(pseudo bool) {
+	ep.Pseudo = pseudo
 }
 
 // SetUsers set multi-user
@@ -109,6 +115,7 @@ func (ep *Endpoint) Copy() *Endpoint {
 	endpoint.Passwords = append(endpoint.Users, ep.Passwords...)
 	endpoint.Key = ep.Key
 	endpoint.QAs = ep.QAs
+	endpoint.Pseudo = ep.Pseudo
 	endpoint.Timeout = ep.Timeout
 	endpoint.Labels = ep.Labels
 	endpoint.writers = ep.writers
@@ -147,6 +154,9 @@ func (ep *Endpoint) Mask(endpoints ...*Endpoint) {
 		}
 		if ep.QAs == nil {
 			ep.QAs = endpoint.QAs
+		}
+		if !ep.Pseudo {
+			ep.Pseudo = endpoint.Pseudo
 		}
 		if ep.Timeout == 0 {
 			ep.Timeout = endpoint.Timeout
@@ -346,7 +356,18 @@ func (ep *Endpoint) CmdOutBytes(cmd string) ([]byte, error) {
 		return nil, fmt.Errorf("创建Session出错: %v", err)
 	}
 	defer sess.Close()
-
+	if ep.Pseudo {
+		// Set up terminal modes
+		modes := ssh.TerminalModes{
+			ssh.ECHO:          1, //是否回显输入的命令
+			ssh.TTY_OP_ISPEED: 14400,
+			ssh.TTY_OP_OSPEED: 14400,
+		}
+		// Request pseudo terminal
+		if err = sess.RequestPty("xterm-256color", 0, 0, modes); err != nil {
+			return nil, fmt.Errorf("创建终端出错: %v", err)
+		}
+	}
 	return sess.CombinedOutput(cmd)
 }
 
@@ -407,17 +428,17 @@ func (ep *Endpoint) StartTerminal() error {
 			}
 		}
 	}()
-
+	// Set up terminal modes
 	modes := ssh.TerminalModes{
 		ssh.ECHO:          1, //是否回显输入的命令
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
 	}
-
+	// Request pseudo terminal
 	if err = sess.RequestPty("xterm-256color", height, width, modes); err != nil {
 		return fmt.Errorf("创建终端出错: %v", err)
 	}
-
+	// Set up terminal modes
 	if err = sess.Shell(); err != nil {
 		return fmt.Errorf("执行Shell出错: %v", err)
 	}
