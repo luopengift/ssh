@@ -439,6 +439,7 @@ func (ep *Endpoint) StartTerminal() error {
 	return sess.Wait()
 }
 
+// Close close endpoint client
 func (ep *Endpoint) Close() error {
 	if ep.client != nil {
 		return ep.client.Close()
