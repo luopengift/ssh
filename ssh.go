@@ -446,3 +446,13 @@ func (ep *Endpoint) Close() error {
 	}
 	return nil
 }
+
+// Find querys in endpoint
+func (ep *Endpoint) Find(querys ...string) bool {
+	for _, query := range querys {
+		if strings.Contains(ep.Name, query) || strings.Contains(ep.Host, query) || strings.Contains(ep.IP, query) {
+			return true
+		}
+	}
+	return false
+}
