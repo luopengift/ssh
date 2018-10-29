@@ -58,7 +58,7 @@ func NewEndpointWithValue(name, host, ip, port, user, password, key string, writ
 
 // Init Init
 func (ep *Endpoint) Init(filename string) error {
-	return types.ParseConfigFile(filename, ep)
+	return types.ParseConfigFile(ep, filename)
 }
 
 // SetPseudo disable/force pseudo-terminal allocation.
