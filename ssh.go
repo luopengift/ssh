@@ -447,12 +447,22 @@ func (ep *Endpoint) Close() error {
 	return nil
 }
 
-// Find querys in endpoint
-func (ep *Endpoint) Find(querys ...string) bool {
+// FindOr querys in endpoint
+func (ep *Endpoint) FindOr(querys ...string) bool {
 	for _, query := range querys {
 		if strings.Contains(ep.Name, query) || strings.Contains(ep.Host, query) || strings.Contains(ep.IP, query) {
 			return true
 		}
 	}
 	return false
+}
+
+// Find means when all querys must in Endpoint, then return true
+func (ep *Endpoint) Find(querys ...string) bool {
+	for _, query := range querys {
+		if !ep.FindOr(query) {
+			return false
+		}
+	}
+	return true
 }
