@@ -442,7 +442,9 @@ func (ep *Endpoint) StartTerminal() error {
 // Close close endpoint client
 func (ep *Endpoint) Close() error {
 	if ep.client != nil {
-		return ep.client.Close()
+		err := ep.client.Close()
+		ep.client = nil
+		return err
 	}
 	return nil
 }
