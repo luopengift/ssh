@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -37,8 +38,22 @@ type Endpoint struct {
 }
 
 // NewEndpoint NewEndpoint
-func NewEndpoint() *Endpoint {
-	return new(Endpoint)
+func NewEndpoint(s ...string) *Endpoint {
+	endpoint := &Endpoint{}
+	if len(s) == 0 {
+		return endpoint
+	}
+	if strings.Contains(s[0], "@") {
+		d := strings.Split(s[0], "@")
+		endpoint.User, endpoint.IP = d[0], d[1]
+	} else {
+		endpoint.IP = s[0]
+	}
+	if strings.HasPrefix(endpoint.IP, "ip-") { // support aws hostname format
+		re := regexp.MustCompile(`[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}.[0-9]{1,3}`)
+		endpoint.IP = strings.Replace(re.FindString(endpoint.IP), "-", ".", -1)
+	}
+	return endpoint
 }
 
 // NewEndpointWithValue NewEndpointWithValue
